@@ -1,0 +1,46 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Backend Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Build Frontend
+        run: |
+          npm install
+          npm run build
+
+      - name: Upload Frontend to S3
+        run: aws s3 sync build/ s3://your-production-bucket
+
+      - name: Deploy Backend to EC2 (Production)
+        run: |
+          ssh ubuntu@your-production-ec2-ip "
+          cd app &&
+          git pull &&
+          pip install -r requirements.txt &&
+          python manage.py migrate &&
+          sudo systemctl restart gunicorn &&
+          sudo systemctl restart celery
+          "
